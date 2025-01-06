@@ -1,10 +1,11 @@
 from django.http import HttpResponse
 
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from .models import Posts
 
 from django.contrib import messages
 from .form import PostCreateFrom
+from .form2 import PostUpdateForm
 
 # Create your views here.
 # 게시글 등록
@@ -24,19 +25,56 @@ def create_post(request):
         else:
             messages.error(request, '게시글 등록에 실패했습니다.')
 
-        return render(request,'posts/create.html',{'form' : form})
+    return render(request,'posts/create.html',{'form' : form})
 
 # 게시글 보기
+# def get_post(request, post_id):
+#     return HttpResponse('게시글 보기')
 def get_post(request, post_id):
-    return HttpResponse('게시글 보기')
+    post = get_object_or_404(Posts, id=post_id)
+    return render(request,'posts/read.html', {'post':post})
 
 # 게시글 수정 
+# def update_post(request, post_id):
+#     return HttpResponse('게시글 수정')
 def update_post(request, post_id):
-    return HttpResponse('게시글 수정')
+    post = get_object_or_404(Posts, id=post_id)
+    form = PostUpdateForm(instance=post)
+
+    if request.method == 'POST' :
+        form = PostUpdateForm(request.POST)
+
+        if form.is_valid():
+            if form.cleaned_data['password'] == post.password:
+                post = form.save(commit=False)
+                post.save()
+                messages.success(request,'게시글 수정되었습니다.')
+                return redirect("posts:read", post_id = post.id)
+            else:
+                messages.error(request, '비밀번호가 일치하지 않습니다.')
+        else:
+            messages.error(request, '게시글 등록에 실패했습니다.')
+
+    return render(request,'posts/update.html',{'form' : form})
+
 
 # 게시글 삭제
+# def delete_post(request, post_id):
+#     return HttpResponse('게시글 삭제')
+
 def delete_post(request, post_id):
-    return HttpResponse('게시글 삭제')
+    post= get_object_or_404(Posts, id=post_id)
+    password = request.POST.get('password')
+
+    if request.method == 'POST':
+        if password == post.password:
+            post.delete()
+            messages.success(request, '게시글이 삭제되었습니다.')
+            return redirect('posts:list')
+        else:
+            messages.error(request, '비밀번호가 일치하지 않습니다,')
+            return redirect('posts:read', post_id=post.id)
+
 
 # 게시글 목록
 # def get_posts(request):
